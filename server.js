@@ -13,6 +13,8 @@ const flash = require("express-flash")
 const session = require("express-session")
 const methodOverride = require("method-override")
 const bodyParser = require("body-parser");
+const fs = require("fs")
+var cookieParser = require('cookie-parser');
 initializePassport(
     passport,
     email => users.find(user => user.email === email),
@@ -36,17 +38,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(passport.initialize()) 
 app.use(passport.session())
 app.use(methodOverride("_method"))
-
 // Configuring the register post functionality
 app.post("/login", checkNotAuthenticated, passport.authenticate("local", {
     successRedirect: "/",
     failureRedirect: "/login",
     failureFlash: true
 }))
-
 // Configuring the register post functionality
 app.post("/register", checkNotAuthenticated, async (req, res) => {
-
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
         users.push({
@@ -55,13 +54,20 @@ app.post("/register", checkNotAuthenticated, async (req, res) => {
             email: req.body.email,
             password: hashedPassword,
         })
-        console.log(users); // Display newly registered in the console
         res.redirect("/login")
         
     } catch (e) {
         console.log(e);
         res.redirect("/register")
     }
+    const jsonData = JSON.stringify(users, null, 2);
+  // Menulis data ke dalam file users.js
+  fs.writeFile('users.json', jsonData, (err) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+  });
 })
 
 // Routes
@@ -103,5 +109,13 @@ function checkNotAuthenticated(req, res, next){
     }
     next()
 }
+//API MAIN
+let main = require('./routes/main'),
+    api = require('./routes/api')
 
+app.set("json spaces",2)
+app.use('/api', api)
+app.use('/', main)
 app.listen(3000)
+
+module.exports = app
